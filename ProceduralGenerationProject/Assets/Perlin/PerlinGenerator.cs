@@ -9,16 +9,16 @@ public class PerlinGenerator : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		// get size of terrain
+		// get terrain and size of terrain
 		terrain = (Terrain)gameObject.GetComponent ("Terrain");
 		Vector3 tSize = terrain.terrainData.size;
-		Debug.Log (tSize);
+		//Debug.Log (tSize);
 
 		// set perlin noise origin coordinates
 		float xOrg = Random.Range (0, .1f);
 		float yOrg = Random.Range (0, .1f);
 
-		// generate random values
+		// get heightmap
 		float[,] heightmap = new float[terrain.terrainData.heightmapWidth, terrain.terrainData.heightmapHeight];
 
 		// fill array with perlin noise values
