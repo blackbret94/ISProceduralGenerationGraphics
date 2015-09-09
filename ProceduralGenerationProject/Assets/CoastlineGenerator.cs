@@ -2,10 +2,13 @@
 using System.Collections;
 
 // this script generates a coastline by raising the land slightly
+// inspired by the algorithm suggested by in Controlled Procedural
+// Terrain Generation Using Software Agents
 
 public class CoastlineGenerator : MonoBehaviour {
 	public float startTokens; // how big is the land mass?
 	public float limit; // how many tokens are allowed to each agent
+	public float agentRange = 10; // how far can the attractor and repulsor be? Must be greater than 1.
 	Terrain terrain; // the actual terrain
 	float[,] pointArray; // array representing point values
 	float[,] heightmap; // array representing heightmap
@@ -27,26 +30,19 @@ public class CoastlineGenerator : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		// get terrain and size of terrain
+		// get terrain
 		terrain = (Terrain)gameObject.GetComponent ("Terrain");
-		Vector3 tSize = terrain.terrainData.size;
-		Debug.Log (tSize);
-		
-		// set perlin noise origin coordinates
-		//float xOrg = Random.Range (0, .1f);
-		//float yOrg = Random.Range (0, .1f);
 		
 		// get heightmap
 		heightmap = new float[terrain.terrainData.heightmapWidth, terrain.terrainData.heightmapHeight];
 
 		// create array to hold point values.  Points with the highest values will be raised
-		pointArray = new float[terrain.terrainData.heightmapWidth, terrain.terrainData.heightmapHeight];
+		pointArray = new float[3,3];
 
-		// initialize arrays
+		// initialize heightmap array
 		for(int i=0;i<heightmap.GetLength(0);i++){
 			for(int j=0;j<heightmap.GetLength(1);j++){
 				heightmap[i,j] = 0f;
-				pointArray[i,j] = 0f;
 			}
 		}
 
@@ -71,7 +67,7 @@ public class CoastlineGenerator : MonoBehaviour {
 			// create 2 child agents
 			for (int i=0; i<2; i++) {
 				// point
-				Vector3 newPoint = RandomAdjacentPoint (agent.point);
+				Vector3 newPoint = RandomAdjacentPoint (agent.point)+Random.Range(0,5)*agent.direction;
 
 				// direction
 				Vector3 newDir = RandomDirection ();
@@ -85,44 +81,54 @@ public class CoastlineGenerator : MonoBehaviour {
 		} else { 
 			// for each token
 			for(int i=0;i<agent.tokens;i++){
-				// pick a random adjacent point
-				Vector3 adjPoint = RandomAdjacentPoint(agent.point);
+				// check if the point is surrounded by land
+				while(IsSurroundedByLand(agent.point)){
+					agent.point = agent.point+agent.direction;
+				}
 
-				// for all points surrounding the random adjacent point, raise the value of each point by 1
+				// create repulsor
+				Vector3 repul = new Vector3(agent.point.x,agent.point.y,agent.point.z); // clone
+				repul = repul+agent.direction*Random.Range(1,agentRange);// translate
+				
+				// create attractor
+				Vector3 attra = new Vector3(agent.point.x,agent.point.y,agent.point.z); // clone
+				attra = attra-agent.direction*Random.Range(1,agentRange);// translate
+
+				// for all points surrounding the random adjacent point, score the point
 				for(float j=0f;j<3f;j++){
 					for(float k=0f;k<3f;k++){
-						// raise if this is not the actual point
+						//  score if not the actual point
 						if(j!=1f&&k!=1f){
-							// x
-							int xx =  Mathf.FloorToInt(adjPoint.x+(j-1f));
-
-							// z
-							int zz =  Mathf.FloorToInt(adjPoint.z+(k-1f));
-
-							pointArray[xx,zz]++;
+							pointArray[(int)j,(int)k] = ScorePoint(agent.point,repul,attra);
 						}
 					}
 				}
 
-				// REPLACE THIS WITH A PRIORITY QUEUE LATER
-				// save highest points
+				// raise the highest scoring surrounding point
+				// save pointArray coordinates of highest scoring point
 				int hX = 0;
 				int hZ = 0;
 
+				// save 0,0 point
+				int sX = (int)agent.point.x-1;
+				int sZ = (int)agent.point.z-1;
+				
 				// find the highest point
-				for(int j=0;j<heightmap.GetLength(0);j++){
-					for(int k=0;k<heightmap.GetLength(1);k++){
+				for(int j=0;j<3;j++){
+					for(int k=0;k<3;k++){
+						// check that it is higher than the previously saved point
 						if(pointArray[j,k]>pointArray[hX,hZ]){
 							hX = j;
 							hZ = k;
 						}
-
 					}
 				}
-
+				
 				// raise the heightmap of the heightest point, then set the point array to -inf so it is not raised again
-				heightmap[hX,hZ] = .1f;
-				pointArray[hX,hZ] = int.MinValue;
+				heightmap[sX+hX,sZ+hZ] = .01f;
+
+				// move to this point
+				agent.point = new Vector3(sX+hX,0,sZ+hZ);
 			}
 		}
 	}
@@ -191,5 +197,48 @@ public class CoastlineGenerator : MonoBehaviour {
 		} while(xDir == 0 && zDir == 0);
 
 		return new Vector3(xDir,0,zDir);
+	}
+
+	// checks to make sure the surrounding landmass is not raised
+	bool IsSurroundedByLand(Vector3 pt){
+		// save 0,0
+		int sX = (int)pt.x-1;
+		int sZ = (int)pt.z-1;
+
+		// iterate through adjacent points
+		for(int j=0;j<3;j++){
+			for(int k=0;k<3;k++){
+				if(heightmap[sX+j,sZ+k]==0){
+					// this point is sea level
+					return false;
+				}
+			}
+		}
+
+		// no points were at sea level
+		return true;
+	}
+	
+	// scores a point
+	float ScorePoint(Vector3 pt, Vector3 repulsor, Vector3 attractor){
+		// square of distance between pt and attractor
+		float da = Vector3.Distance (pt, attractor);
+		da = da * da;
+
+		// square of distance between pt and repulsor
+		float dr = Vector3.Distance (pt, repulsor);
+		dr = dr * dr;
+
+		// vertical distance to the edge of the map
+		float deV = Mathf.Min(Vector3.Distance(pt,new Vector3(pt.x,0,0)),Vector3.Distance(pt,new Vector3(pt.x,0,terrain.terrainData.heightmapHeight)));
+
+		// horizontal distance to the edge of the map;
+		float deH = Mathf.Min(Vector3.Distance(pt,new Vector3(0,0,pt.z)),Vector3.Distance(pt,new Vector3(terrain.terrainData.heightmapWidth,0,pt.z)));;
+
+		// choose the best of the vert and horiz distance and set it to the distance to the edge of the map
+		float de = Mathf.Min(deV,deH);
+
+		// return the calculation
+		return dr-da+3*de;
 	}
 }
