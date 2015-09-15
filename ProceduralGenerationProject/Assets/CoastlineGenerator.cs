@@ -384,11 +384,15 @@ public class CoastlineGenerator : MonoBehaviour {
 
 	// generates nautre
 	void GenerateNature(float[,] hm){
+		// wipe old trees
+		terrain.terrainData.treeInstances = new TreeInstance[0];
+
+		// iterate through vertecies
 		for(int i=0;i<terrain.terrainData.heightmapWidth;i++){
 			for(int j=0;j<terrain.terrainData.heightmapHeight;j++){
 				// TREES
 				// is it above sea level?
-				if(hm[i,j] > 0){
+				if(terrain.terrainData.GetHeight(i,j) > 1){
 					// is it relatively flat?
 					Vector3 thisPoint = new Vector3(i,0,j);
 					float vna = GetVonNeumannAverage(hm,thisPoint);
@@ -399,18 +403,30 @@ public class CoastlineGenerator : MonoBehaviour {
 							// generate trees
 							TreeInstance treeInst = new TreeInstance();
 							treeInst.prototypeIndex = Random.Range(0,2);
-							Vector3 position = new Vector3((1.0f/terrain.terrainData.heightmapWidth) * i,0,(1.0f/terrain.terrainData.heightmapHeight) *j);
-							position.y = terrain.terrainData.GetInterpolatedHeight((1.0f/terrain.terrainData.heightmapWidth) * i, (1.0f/terrain.terrainData.heightmapHeight) *j)*(1.0f/terrain.terrainData.size.y);
+							Vector3 position = new Vector3(((float)i)/terrain.terrainData.heightmapWidth,0,((float)j)/terrain.terrainData.heightmapHeight);
+							//Vector3 position = new Vector3(i,0,j);
+							position.y = terrain.terrainData.GetInterpolatedHeight((float)i/terrain.terrainData.heightmapWidth, (float)j/terrain.terrainData.heightmapHeight) / terrain.terrainData.size.y;
 							treeInst.position = position;
+							float sizeMod = Random.Range(.8f,1.2f);
+							treeInst.heightScale = sizeMod;
+							treeInst.widthScale = sizeMod;
+
+							float colorMod = Random.Range(.8f,1f);
+							treeInst.color = new Color (colorMod, colorMod, colorMod);
+							treeInst.lightmapColor = new Color (1, 1, 1);
 							terrain.AddTreeInstance(treeInst);
-							terrain.Flush();
-							print(position);
-							//print(terrain.terrainData.treeInstances.Length); //does show trees are being added to the treeInstances array
+
+							//print(position);
+
 						}
 					}
 
 				}
 			}
 		}
+
+		// flush and print
+		terrain.Flush();
+		print(terrain.terrainData.treeInstances.Length); //does show trees are being added to the treeInstances array
 	}
 }
