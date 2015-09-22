@@ -73,6 +73,9 @@ public class CoastlineGenerator : MonoBehaviour {
 
 		// generate enviornment
 		GenerateNature (heightmap);
+
+		// generate textures
+		GenerateTexture ();
 	}
 	
 	// Update is called once per frame
@@ -428,5 +431,75 @@ public class CoastlineGenerator : MonoBehaviour {
 		// flush and print
 		terrain.Flush();
 		print(terrain.terrainData.treeInstances.Length); //does show trees are being added to the treeInstances array
+	}
+
+	// add textures
+	// ASSUMES 0-Grass 1-Sand 2-Rock
+	void GenerateTexture(){
+		// get data and create array for textures
+		TerrainData td = terrain.terrainData;
+		float[, ,] textureData = new float[td.alphamapWidth, td.alphamapHeight, td.alphamapLayers];
+
+		//td.alphamapHeight = td.heightmapHeight;
+		//td.alphamapWidth = td.heightmapWidth;
+		Debug.Log (td.alphamapHeight);
+		Debug.Log (td.alphamapResolution);
+		Debug.Log (td.heightmapResolution);
+		float resMod = td.alphamapHeight/td.heightmapHeight;// adjusts the alphamap coords to the heightmap coords
+		Debug.Log (resMod);
+
+		// assign textures
+		for (int i=0; i<td.alphamapWidth; i++) {
+			for(int j=0; j<td.alphamapHeight;j++){
+				// set grass default
+				Vector3 splat = new Vector3(1,0,0);
+				//textureData[i,j,0] = 1;
+
+				// draw sand if height < 1.5
+				if(td.GetInterpolatedHeight((float)i/td.heightmapWidth,(float)j/td.heightmapHeight) <= 1){
+					//textureData[i,j,1] = 1;
+					splat.y = 1;
+				} else if(td.GetInterpolatedHeight((float)i/td.heightmapWidth,(float)j/td.heightmapHeight) <= 2){
+					splat.y = .5f;
+				}
+
+				// apply rock if the slope is steep
+				if(td.GetSteepness((float)i/td.heightmapWidth,(float)j/td.heightmapHeight) > 35){
+					//textureData[i,j,2] = 1;
+					splat.z = 1;
+					//splat.x = 0;
+					//splat.y = 0;
+					//Debug.Log(td.GetSteepness((float)i/td.heightmapWidth,(float)j/td.heightmapHeight));
+				}
+
+				// normalize
+				splat.Normalize();
+                textureData[i, j, 0] = splat.x;
+                textureData[i, j, 1] = splat.y;
+                textureData[i, j, 2] = splat.z;
+			}
+		}
+		// invert array
+		textureData = RotateMap90 (textureData, td.alphamapWidth);
+		//textureData = RotateMap90 (textureData, td.alphamapWidth);
+
+		// apply
+		td.SetAlphamaps (0, 0, textureData);
+	}
+
+	// helper function to rotate a matrix, inspired by http://stackoverflow.com/questions/42519/how-do-you-rotate-a-two-dimensional-array
+	// rotates 90 degrees
+	static float[,,] RotateMap90(float[,,] matrix, int n) {
+		float[,,] ret = new float[n, n, 3];
+		
+		for (int i = 0; i < n; ++i) {
+			for (int j = 0; j < n; ++j) {
+				ret[i, j, 0] = matrix[j, i, 0];
+				ret[i, j, 1] = matrix[j, i, 1];
+				ret[i, j, 2] = matrix[j, i, 2];
+			}
+		}
+		
+		return ret;
 	}
 }

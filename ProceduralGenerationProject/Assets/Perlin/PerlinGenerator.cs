@@ -11,7 +11,7 @@ public class PerlinGenerator : MonoBehaviour {
 	void Start () {
 		// get terrain and size of terrain
 		terrain = (Terrain)gameObject.GetComponent ("Terrain");
-		Vector3 tSize = terrain.terrainData.size;
+		//Vector3 tSize = terrain.terrainData.size;
 		//Debug.Log (tSize);
 
 		// set perlin noise origin coordinates
