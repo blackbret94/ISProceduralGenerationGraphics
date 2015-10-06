@@ -1,9 +1,9 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="MonoDevelop.Default" />
   <MonoDevelop.Ide.Workbench ActiveDocument="Assets\CityGenerator.cs">
     <Files>
-      <File FileName="Assets\Island Generator\CoastlineGenerator.cs" Line="159" Column="30" />
-      <File FileName="Assets\CityGenerator.cs" Line="23" Column="98" />
+      <File FileName="Assets\CityGenerator.cs" Line="147" Column="32" />
+      <File FileName="Assets\Island Generator\CoastlineGenerator.cs" Line="313" Column="24" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

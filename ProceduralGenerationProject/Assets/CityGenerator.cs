@@ -21,6 +21,7 @@ public class CityGenerator : MonoBehaviour {
 	// This is where we will store the resulting data
 	private Dictionary<Vector2f, Site> sites;
 	private List<Edge> edges;
+	private Vector2f startSite, endSite;
 	
 	// Use this for initialization
 	void Start () {
@@ -66,7 +67,17 @@ public class CityGenerator : MonoBehaviour {
 
 		// apply polygons
 		DisplayVoronoiDiagram();
-		
+
+		// pick start and end points
+		ChooseRandomPoints ();
+
+		// generate maze
+		DrawLine (startSite, endSite,20f/terrain.terrainData.size.y);
+
+		// move player
+		Transform player = GameObject.Find("FPSController").GetComponent<Transform>();
+		player.position = new Vector3 (startSite.x, 30f, startSite.y);
+
 		// reattatch array to terrain
 		terrain.terrainData.SetHeights(0,0,heightmap);
 		
@@ -97,7 +108,7 @@ public class CityGenerator : MonoBehaviour {
 			// if the edge doesn't have clippedEnds, if was not within the bounds, dont draw it
 			if (edge.ClippedEnds == null) continue;
 			
-			DrawLine(edge.ClippedEnds[LR.LEFT], edge.ClippedEnds[LR.RIGHT]);
+			DrawLine(edge.ClippedEnds[LR.LEFT], edge.ClippedEnds[LR.RIGHT],0f);
 		}
 		//tx.Apply();
 		
@@ -106,7 +117,7 @@ public class CityGenerator : MonoBehaviour {
 	
 	// Bresenham line algorithm
 	// adaption from http://forum.unity3d.com/threads/delaunay-voronoi-diagram-library-for-unity.248962/
-	private void DrawLine(Vector2f p0, Vector2f p1, int offset = 0) {
+	private void DrawLine(Vector2f p0, Vector2f p1, float height, int offset = 0) {
 		int x0 = (int)p0.x;
 		int y0 = (int)p0.y;
 		int x1 = (int)p1.x;
@@ -121,7 +132,7 @@ public class CityGenerator : MonoBehaviour {
 		while (true) {
 			//tx.SetPixel(x0+offset,y0+offset,c);
 			//heightmap[x0+offset,y0+offset] = 0f;
-			ChangeHeightReg(x0+offset,y0+offset,5,0f);
+			ChangeHeightReg(x0+offset,y0+offset,5,height);
 
 			if (x0 == x1 && y0 == y1) break;
 			int e2 = 2*err;
@@ -148,6 +159,33 @@ public class CityGenerator : MonoBehaviour {
 				}
 			}
 		}
+	}
+
+	// pick two random points, the start and end site
+	public void ChooseRandomPoints(){
+		// create list
+		int s = sites.Count;
+		Vector2f[] siteList = new Vector2f[s];
+		//ArrayList siteList = new ArrayList();
+
+		int i = 0;
+		foreach (KeyValuePair<Vector2f,Site> kv in sites) {
+			siteList[i] = kv.Key;
+			i++;
+		}
+
+		// pick start
+		int sIndex = Random.Range (0, s);
+		int eIndex = Random.Range (0, s);
+
+		// pick end
+		while (sIndex == eIndex) {
+			eIndex = Random.Range (0, s);
+		} 
+
+		// assign
+		startSite = siteList[sIndex];
+		endSite = siteList[eIndex];
 	}
 
 }
