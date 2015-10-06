@@ -1,8 +1,9 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\CoastlineGenerator.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\CityGenerator.cs">
     <Files>
-      <File FileName="Assets\CoastlineGenerator.cs" Line="459" Column="93" />
+      <File FileName="Assets\Island Generator\CoastlineGenerator.cs" Line="159" Column="30" />
+      <File FileName="Assets\CityGenerator.cs" Line="23" Column="98" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
