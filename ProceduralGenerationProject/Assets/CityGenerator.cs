@@ -12,7 +12,10 @@ public class CityGenerator : MonoBehaviour {
 	public int maxPolygons; // maximum number of polygons
 	public int seed = 0; // random number generator
 	public int connectionIts = 1; // number of iterations of connections
-	public int gapSize = 5; // how big will the river and bridge gap be?
+	public int riverSize = 5; // how big will the river gap be?
+	public int bridgeSize = 5; // how big will the bridges be?
+	public int noiseSize = 3; // modifier for Perlin noise
+	public int noisePeriod = 80; // modifier for how often a noise cycle repeats
 	Terrain terrain; // the actual terrain
 	float[,] pointArray; // array representing point values
 	float[,] heightmap; // array representing heightmap
@@ -74,6 +77,10 @@ public class CityGenerator : MonoBehaviour {
 		for (int i=0; i<connectionIts; i++) {
 			RandomConnections ();
 		}
+
+		// add noise
+		heightmap = PerlinNoise (heightmap);
+
 		// reattatch array to terrain
 		terrain.terrainData.SetHeights(0,0,heightmap);
 
@@ -103,13 +110,13 @@ public class CityGenerator : MonoBehaviour {
 			// if the edge doesn't have clippedEnds, if was not within the bounds, dont draw it
 			if (edge.ClippedEnds == null) continue;
 			
-			DrawLine(edge.ClippedEnds[LR.LEFT], edge.ClippedEnds[LR.RIGHT],0f);
+			DrawLine(edge.ClippedEnds[LR.LEFT], edge.ClippedEnds[LR.RIGHT],0f,riverSize);
 		}
 	}
 	
 	// Bresenham line algorithm
 	// adaption from http://forum.unity3d.com/threads/delaunay-voronoi-diagram-library-for-unity.248962/
-	private void DrawLine(Vector2f p0, Vector2f p1, float height, int offset = 0) {
+	private void DrawLine(Vector2f p0, Vector2f p1, float height, int width,int offset = 0) {
 		int x0 = (int)p0.x;
 		int y0 = (int)p0.y;
 		int x1 = (int)p1.x;
@@ -124,7 +131,7 @@ public class CityGenerator : MonoBehaviour {
 		while (true) {
 			//tx.SetPixel(x0+offset,y0+offset,c);
 			//heightmap[x0+offset,y0+offset] = 0f;
-			ChangeHeightReg(x0+offset,y0+offset,gapSize,height);
+			ChangeHeightReg(x0+offset,y0+offset,width,height);
 
 			if (x0 == x1 && y0 == y1) break;
 			int e2 = 2*err;
@@ -218,7 +225,7 @@ public class CityGenerator : MonoBehaviour {
 			}
 
 			// draw
-			DrawLine (new Vector2f(kv.Key.x,kv.Key.y), new Vector2f(agent.x,agent.z),20f/terrain.terrainData.size.y);
+			DrawLine (new Vector2f(kv.Key.x,kv.Key.y), new Vector2f(agent.x,agent.z),20f/terrain.terrainData.size.y,bridgeSize);
 		}
 	}
 
@@ -252,6 +259,30 @@ public class CityGenerator : MonoBehaviour {
 				}
 			}
 		}
+	}
+
+	float[,] PerlinNoise(float[,] hm){
+		// fractal origins
+		float xOrg = Random.Range (0, .1f);
+		float yOrg = Random.Range (0, .1f);
+		
+		// iterate through maps
+		for(int i=0;i<hm.GetLength(0);i++){
+			for(int j=0;j<hm.GetLength(1);j++){
+				// make sure this is part of the land mass
+				if(hm[i,j] > 0){
+					// get perlin noise coordinates
+					float xCoord = xOrg + (float)i / ((float)hm.GetLength(0)/25);
+					float yCoord = yOrg + (float)j / ((float)hm.GetLength(1)/25);
+					
+					// multiply the current height by a multiple of the perlin noise
+					hm[i,j] = hm[i,j]+noiseSize*Mathf.PerlinNoise(xCoord, yCoord)/noisePeriod;
+				}
+			}
+		}
+		
+		// return
+		return heightmap;
 	}
 
 }
