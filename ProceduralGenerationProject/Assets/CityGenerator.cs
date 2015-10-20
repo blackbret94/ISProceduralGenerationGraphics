@@ -16,6 +16,8 @@ public class CityGenerator : MonoBehaviour {
 	public int bridgeSize = 5; // how big will the bridges be?
 	public int noiseSize = 3; // modifier for Perlin noise
 	public int noisePeriod = 80; // modifier for how often a noise cycle repeats
+	public int minIslandHeight = 5; // smallest height an island can be
+	public int islandRange = 20; // range in height between islands
 	Terrain terrain; // the actual terrain
 	float[,] pointArray; // array representing point values
 	float[,] heightmap; // array representing heightmap
@@ -26,6 +28,7 @@ public class CityGenerator : MonoBehaviour {
 	// This is where we will store the resulting data
 	private Dictionary<Vector2f, Site> sites;
 	private List<Edge> edges;
+	private List<List<Vector2f>> islands;
 	private Vector2f startSite, endSite;
 	private int tw, th;
 	
@@ -46,16 +49,16 @@ public class CityGenerator : MonoBehaviour {
 		tw = terrain.terrainData.heightmapWidth;
 		th = terrain.terrainData.heightmapHeight;
 		
-		// initialize heightmap array
+		// initialize heightmap array and set values to 0
 		for(int i=0;i<heightmap.GetLength(0);i++){
 			for(int j=0;j<heightmap.GetLength(1);j++){
-				//heightmap[i,j] = 0f;
-				heightmap[i,j] = 20f/terrain.terrainData.size.y;
+				heightmap[i,j] = 1f; // for easy identification
 			}
 		}
 
 		// Create your sites (lets call that the center of your polygons)
 		List<Vector2f> points = CreateRandomPoint();
+		islands = new List<List<Vector2f>> ();
 		
 		// Create the bounds of the voronoi diagram
 		// Use Rectf instead of Rect; it's a struct just like Rect and does pretty much the same,
@@ -72,6 +75,26 @@ public class CityGenerator : MonoBehaviour {
 
 		// apply polygons
 		DisplayVoronoiDiagram();
+
+		// discover islands
+		//int k = 0;
+		foreach (KeyValuePair<Vector2f,Site> kv in sites) {
+			// create list
+			List<Vector2f> newIsland = new List<Vector2f>();
+
+			// choose modifier
+			float mod = (float)Random.Range(0,islandRange);
+			float targh = ((float)minIslandHeight+mod)/terrain.terrainData.size.y;
+
+			// floodfill
+			FloodFill(kv.Key,1f,targh,newIsland);
+
+			// add
+			islands.Add(newIsland);
+
+			// inc
+			//k++;
+		}
 
 		// generate maze
 		for (int i=0; i<connectionIts; i++) {
@@ -187,6 +210,7 @@ public class CityGenerator : MonoBehaviour {
 	// temporary solution to making an interesting maze
 	// for each node, a line is drawn in a random direction until another node has been found
 	public void RandomConnections(){
+		// IMPROVEMENT: save nodes to a list, get the difference between island nodes, then gradually raise the land to make a smooth bridge
 		// raise bridges
 		foreach (KeyValuePair<Vector2f,Site> kv in sites) {
 			// pick a direction
@@ -225,7 +249,7 @@ public class CityGenerator : MonoBehaviour {
 			}
 
 			// draw
-			DrawLine (new Vector2f(kv.Key.x,kv.Key.y), new Vector2f(agent.x,agent.z),20f/terrain.terrainData.size.y,bridgeSize);
+			DrawLine (new Vector2f(kv.Key.x,kv.Key.y), new Vector2f(agent.x,agent.z),heightmap[(int)kv.Key.x,(int)kv.Key.y],bridgeSize);
 		}
 	}
 
@@ -254,7 +278,7 @@ public class CityGenerator : MonoBehaviour {
 				if(Random.Range(0,s) == 0){
 					// move player
 					Transform player = GameObject.Find("FPSController").GetComponent<Transform>();
-					player.position = new Vector3 (kv.Key.x, 30f, kv.Key.y);
+					player.position = new Vector3 (kv.Key.x, heightmap[(int)kv.Key.x,(int)kv.Key.y]+100f, kv.Key.y);
 					return;
 				}
 			}
@@ -285,4 +309,38 @@ public class CityGenerator : MonoBehaviour {
 		return heightmap;
 	}
 
+	// floodfill algorithm to determine what vertecies are in each island.
+	// raises the land to the desired height and adds to the appropriate island
+	// takes starting coordinates v, target height tHeight, replacement height rHeight,
+	// and list island
+	void FloodFill(Vector2f v, float tHeight, float rHeight, List<Vector2f> island){
+		// float to int
+		int vx = (int)v.x;
+		int vy = (int)v.y;
+
+		// check
+		if (heightmap [vx, vy] == rHeight)
+			return;
+		if (heightmap [vx, vy] != tHeight)
+			return;
+
+		// set
+		heightmap [vx, vy] = rHeight;
+		island.Add (new Vector2f (v.x, v.y));
+
+		// recurse
+		if (v.x > 0) {
+			FloodFill(new Vector2f(v.x-1,v.y),tHeight,rHeight,island);
+		}
+		if (v.y > 0) {
+			FloodFill(new Vector2f(v.x,v.y-1),tHeight,rHeight,island);
+		}
+		if (v.x < heightmap.GetLength (0) - 1) {
+			FloodFill(new Vector2f(v.x+1,v.y),tHeight,rHeight,island);
+		}
+		if (v.y < heightmap.GetLength (1) - 1) {
+			FloodFill(new Vector2f(v.x,v.y+1),tHeight,rHeight,island);
+		}
+
+	}
 }
