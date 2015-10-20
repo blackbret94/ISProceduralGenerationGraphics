@@ -133,13 +133,13 @@ public class CityGenerator : MonoBehaviour {
 			// if the edge doesn't have clippedEnds, if was not within the bounds, dont draw it
 			if (edge.ClippedEnds == null) continue;
 			
-			DrawLine(edge.ClippedEnds[LR.LEFT], edge.ClippedEnds[LR.RIGHT],0f,riverSize);
+			DrawLine(edge.ClippedEnds[LR.LEFT], edge.ClippedEnds[LR.RIGHT],0f,0f,riverSize);
 		}
 	}
 	
 	// Bresenham line algorithm
 	// adaption from http://forum.unity3d.com/threads/delaunay-voronoi-diagram-library-for-unity.248962/
-	private void DrawLine(Vector2f p0, Vector2f p1, float height, int width,int offset = 0) {
+	private void DrawLine(Vector2f p0, Vector2f p1, float sheight, float eheight, int width,int offset = 0) {
 		int x0 = (int)p0.x;
 		int y0 = (int)p0.y;
 		int x1 = (int)p1.x;
@@ -150,10 +150,19 @@ public class CityGenerator : MonoBehaviour {
 		int sx = x0 < x1 ? 1 : -1;
 		int sy = y0 < y1 ? 1 : -1;
 		int err = dx-dy;
-		
+
+		// get legnth
+		float len = Vector2.Distance (new Vector2((int)p0.x,(int)p0.y),new Vector2((int)p1.x,(int)p1.y));
+
+		// counter
+		float cnt = 0f;
+
+		// adjust terrain
 		while (true) {
-			//tx.SetPixel(x0+offset,y0+offset,c);
-			//heightmap[x0+offset,y0+offset] = 0f;
+			// calculate height
+			float height = Mathf.Abs((cnt/len)*(eheight-sheight)+sheight);
+
+			// raise
 			ChangeHeightReg(x0+offset,y0+offset,width,height);
 
 			if (x0 == x1 && y0 == y1) break;
@@ -166,6 +175,9 @@ public class CityGenerator : MonoBehaviour {
 				err += dx;
 				y0 += sy;
 			}
+
+			// inc
+			cnt++;
 		}
 	}
 
@@ -247,9 +259,9 @@ public class CityGenerator : MonoBehaviour {
 				}
 
 			}
-
+	
 			// draw
-			DrawLine (new Vector2f(kv.Key.x,kv.Key.y), new Vector2f(agent.x,agent.z),heightmap[(int)kv.Key.x,(int)kv.Key.y],bridgeSize);
+			DrawLine (new Vector2f(kv.Key.x,kv.Key.y), new Vector2f(agent.x,agent.z),heightmap[(int)kv.Key.x,(int)kv.Key.y],heightmap[(int)agent.x,(int)agent.z],bridgeSize);
 		}
 	}
 
